@@ -28,16 +28,18 @@ def order(g, p):
 
 # решение сравнения g^x=h(mod p) методом BSGS, ord(g)=N
 def shanks(p, g, h, N):
+    print("Shanks")
     # выбор n
     # n = 1 + int(pow(N, 1/2))
     n = 1 + gmpy2.isqrt(mpz(N))
+    print("N =", N, "\nn =", n)
     # l = []
     # x=a+b*n
     a = 0
     b = 0
     # формирование списка (бинарного дерева поиска) BS, g^i, 0<=i<n
-    g_i = 1
     # для хранения списка используется бинарное дерево поиска
+    g_i = 1
     l = bts.BTS(0, g_i)
     for i in range(n):
         # l.append(pow(g, i, p))
@@ -67,14 +69,17 @@ def shanks(p, g, h, N):
             return -1
         # g_j = (g_j * g_inv) % p
         g_j = gmpy2.f_mod(mpz(gmpy2.mul(mpz(g_j), mpz(g_inv))), mpz(p))
+    print("x = i + j * n =", a, "+", b, "*", n, "=", a + b * n)
     return a + b * n
 
 # алгоритм сведения к собственным подгруппам, решающий сравнение g^x=h(mod p), ord(g)=N=p'^e с помощью алгоритма Шенкса
 def group(p, g, h, N):
+    print("Group")
     x = []
     # определяем p' и e, в данном случае ord=p'
     factors = factorint(N)
     ord, e = sorted(factors.items())[0]
+    print("N = p ^ e =", ord, "^", e)
     if e == 1:
         return shanks(p, g, h, N)
     # представляем x=x_0+x_1*p'+x_2*p'^2+...+x_(e-1)*p'^(e-1)
@@ -85,6 +90,8 @@ def group(p, g, h, N):
     for i in range(1, e + 1):
         # вычислям значение показателя p'^(e-i)
         exp = pow(ord, e - i)
+        print("Reduction to subgroups")
+        print("p ^ (e - " + str(i) + ") =", ord, "^", e - i)
         # h_i = pow(h, exp, p)
         h_i = gmpy2.powmod(mpz(h), mpz(exp), mpz(p))
         # формируем значение h_i, которое будет зависеть от произведений g^(-x_j*p'^(e-i+j)), 0<=j<k
@@ -95,12 +102,17 @@ def group(p, g, h, N):
             h_i = gmpy2.mul(mpz(h_i), mpz(gmpy2.powmod(mpz(g), mpz(-x[j] * exp), mpz(p))))
         # h_i = h_i % p
         h_i = gmpy2.f_mod(mpz(h_i), mpz(p))
+        print("g_" + str(i), "=", g_i)
+        print("h_" + str(i), "=", h_i)
+        print("Solving g_" + str(i), "^ x_" + str(i - 1), "= h_" + str(i), "(mod p)")
+        print(g_i, "^ x_" + str(i - 1), "=", h_i, "( mod", p, ")")
         # решаем простое сравнение g_(k+1)^x_k=h_(k+1)(mod p) с помощью алгоритма Шенкса, ord(g_(k+1))=p' будет простым числом
         # откуда находим x_k
         x_k = shanks(p, g_i, h_i, ord)
         # если решения нет, то возвращаем -1
         if x_k == -1:
             return -1
+        print("x_" + str(i - 1), "=", x_k, "( mod", ord, ")")
         x.append(x_k)
     res = 0
     # восстанавливаем x=x_0+x_1*p'+x_2*p'^2+...+x_(e-1)*p'^(e-1)
@@ -120,40 +132,40 @@ def pohlig_hellman(p, g, h, N):
     # решаем сравнение g_i^y_i=h_i(mod p_i^e_i) с помощью алгоритма сведения к собственным подгруппам
     i = 1
     for p_i, e_i in sorted(factors.items()):
-        i = str(i)
-        print("\ni =", i)
+        print("\nPohlig-Hellman\ni =", i)
         ord = pow(p_i, e_i)
-        print("p_" + i, "=", p_i)
-        print("e_" + i, "=", e_i)
+        print("p_" + str(i), "=", p_i)
+        print("e_" + str(i), "=", e_i)
         # N_i = N // ord
         N_i = gmpy2.divexact(mpz(N), mpz(ord))
-        print("N_" + i, "=", N_i)
+        print("N_" + str(i), "=", N_i)
         # g_i = pow(g, N_i, p)
         g_i = gmpy2.powmod(mpz(g), mpz(N_i), mpz(p))
-        print("g_" + i, "=", g_i)
+        print("g_" + str(i), "=", g_i)
         # h_i = pow(h, N_i, p)
         h_i = gmpy2.powmod(mpz(h), mpz(N_i), mpz(p))
-        print("h_" + i, "=", h_i)
-        print("Solving g_" + i, "^ y_" + i, "= h_" + i, "(mod p)")
-        print(g_i, "^ y_" + i, "=", h_i, "( mod", p, ")")
+        print("h_" + str(i), "=", h_i)
+        print("Solving g_" + str(i), "^ y_" + str(i), "= h_" + str(i), "(mod p)")
+        print(g_i, "^ y_" + str(i), "=", h_i, "( mod", p, ")")
         y_i = group(p, g_i, h_i, ord)
         # если решения нет, то возвращаем -1
         if y_i == -1:
             print("No solution")
             return -1
         y.append(y_i)
-        print("y_" + i, "=", y_i, "( mod", ord, ")")
-        i = int(i)
+        print("y_" + str(i), "=", y_i, "( mod", ord, ")")
         i += 1
     # восстановление x
     # решаем систему сравнений с помощью КТО
+    print("\nSolving comparison system")
     x = 0
     for i in range(len(y)):
         p_i, e_i = sorted(factors.items())[i]
         ord = pow(p_i, e_i)
+        print("y_" + str(i + 1), "=", y[i], "( mod", ord, ")")
         # N_i = N // ord
         N_i = gmpy2.divexact(mpz(N), mpz(ord))
-        # x += l[i] * N_i * pow(N_i, -1, ord)
+        # x += y[i] * N_i * pow(N_i, -1, ord)
         N_i_inv = gmpy2.invert(mpz(N_i), mpz(ord))
         x = gmpy2.add(mpz(x), mpz(gmpy2.mul(mpz(y[i]), mpz(gmpy2.mul(mpz(N_i), mpz(N_i_inv))))))
     return x % N
