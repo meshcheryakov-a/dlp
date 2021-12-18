@@ -52,8 +52,7 @@ def shanks(p, g, h, N):
     g_inv = gmpy2.powmod(mpz(g), mpz(-n), mpz(p))
     # формирование списка GS, h*g^-nj, 0<=j<n
     # g_0 = h % p
-    # g_j = gmpy2.f_mod(mpz(h), mpz(p))
-    g_j = h
+    g_j = gmpy2.f_mod(mpz(h), mpz(p))
     for j in range(n):
         # g_j = (h * pow(g_inv, j, p)) % p
         # проверка на пересечение со списком BS
